@@ -1,0 +1,26 @@
+---
+- hosts: localhost
+  roles:
+    - deploy_cnv
+
+- hosts: cnv
+  tasks:
+    - name: "Ping node"
+      debug:
+        msg: "test"
+
+- hosts: localhost
+  tasks:
+    - name: "Retrieve common templates"
+      k8s_facts:
+        kind: Template
+        namespace: openshift
+        label_selectors:
+          - template.cnv.io/type = base
+      register: templates
+
+    - name: "Print name"
+      debug:
+        msg: "{{item.metadata.name}}"
+      with_items: "{{ templates.resources }}"
+

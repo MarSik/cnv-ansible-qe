@@ -1,0 +1,37 @@
+- name: "Temporary dir for install sources"
+  tempfile:
+    state: directory
+    suffix: cnv
+  register: tempdir
+  delegate_to: 127.0.0.1
+  run_once: true
+#  delegate_to: "{{ hostvars[groups['cnv'][0]]['ansible_ssh_host'] }}"
+
+- name: "Get CNV manifests"
+  git:
+    repo: "https://github.com/MarSik/kubevirt-ansible.git"
+    dest: "{{ tempdir.path }}"
+    version: master
+    depth: 1
+  delegate_to: 127.0.0.1
+  run_once: true
+
+- name: "Prepare inventory"
+  shell: ansible-inventory --list -y >{{ tempdir.path }}/inventory.yaml
+  delegate_to: 127.0.0.1
+  run_once: true
+
+- name: "Configure deployment"
+  copy:
+    src: cnv-qe.yml
+    dest: "{{ tempdir.path }}/vars/cnv-qe.yml"
+  delegate_to: 127.0.0.1
+  run_once: true
+
+- name: "Deploy"
+  command: ansible-playbook -v -i {{ tempdir.path }}/inventory.yaml playbooks/kubevirt.yml -e@vars/cnv-qe.yml
+  args:
+    chdir: "{{ tempdir.path }}"
+  delegate_to: 127.0.0.1
+  run_once: true
+
