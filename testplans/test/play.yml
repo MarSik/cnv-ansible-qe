@@ -1,15 +1,18 @@
 ---
-- hosts: localhost
+- name: "Deploy CNV"
+  hosts: localhost
   roles:
     - deploy_cnv
 
-- hosts: cnv
+- name: "Ping cnv nodes"
+  hosts: cnv
   tasks:
     - name: "Ping node"
       debug:
         msg: "test"
 
-- hosts: localhost
+- name: "Test common templates"
+  hosts: localhost
   tasks:
     - name: "Retrieve common templates"
       k8s_facts:
@@ -19,8 +22,17 @@
           - template.cnv.io/type = base
       register: templates
 
-    - name: "Print name"
-      debug:
-        msg: "{{item.metadata.name}}"
-      with_items: "{{ templates.resources }}"
+    - set_fact:
+        oses: "{{ templates.resources
+                    |map(attribute='metadata.labels')
+                    |keys
+                    |flatten
+                    |select('match', '^os.template.cnv.io/.*')
+                    |countitems }}"
+                    
+
+    - name: "Check presence of all required OSes"
+      assert:
+        that:
+          - "oses['os.template.cnv.io/centos7.0'] > 0"
 
