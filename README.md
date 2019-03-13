@@ -1,6 +1,6 @@
-= Ansible based integration tests for CNV
+# Ansible based integration tests for CNV
 
-== Requirements
+## Requirements
 
 Currently this runs Ansible in Python 2 mode
 
@@ -9,7 +9,7 @@ Currently this runs Ansible in Python 2 mode
 - python2-openshift
 - running minishift
 
-== How to run
+## How to run
 
 - start minishift
   `minishift start`
@@ -18,7 +18,7 @@ Currently this runs Ansible in Python 2 mode
 - cd testplans/<plan>
 - ansible-playbook <case>.yml
 
-== How to write new test
+## How to write new test
 
 - define test name
   `TEST_NAME=new-test`
@@ -33,15 +33,21 @@ Currently this runs Ansible in Python 2 mode
 - write your test case playbooks
   `vim case-X.yml`
 
-== How to do...
-=== Populate inventory
+## How to do...
+### Populate inventory
 
 The inventory scripts populates the `cnv`, `masters`, `nodes` and `etcd` groups automatically by inspecting OpenShift Nodes.
 
-=== Calls to OpenShift API
+### Deploy CNV
 
-Use k8s or openshift Ansible modules with connection: local and hosts: localhost. This relies on the oc login step performed earlier.
+Execute the `cnv_deploy` role. See an [example](testplans/test/play.yml).
 
-=== Operation on master nodes
-=== Operation on worker nodes
+The role currently installs CNV 1.4 without extra networking components or shared storage.
+
+### Calls to OpenShift API
+
+Use k8s or openshift Ansible modules with hosts: localhost. This relies on the oc login step performed earlier. See an [example](testplans/test/play.yml).
+
+### Operation on master nodes
+### Operation on worker nodes
 
