@@ -15,8 +15,8 @@ Currently this runs Ansible in Python 2 mode
   `minishift start`
 - log in as system:admin
   `oc login -u system:admin`
-- cd testplans/<plan>
-- ansible-playbook <case>.yml
+- cd testplans/plan-ABCD
+- ansible-playbook case-XYZ.yml
 
 ## How to write new test
 
