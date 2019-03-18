@@ -1,0 +1,71 @@
+---
+- name: "Deploy CNV"
+  hosts: localhost
+  roles:
+    - deploy_cnv
+
+- name: "Run a VM"
+  hosts: localhost
+  vars_files:
+    - fixtures/defaults.yml
+  vars:
+    vm_cpus: 1
+  tasks:
+    - name: "Define a VM"
+      k8s:
+        state: present
+        namespace: myproject
+        definition: "{{ lookup('template', 'fixtures/vm-cirros.yaml') }}"
+      register: vm
+
+    - debug: msg={{ vm }}
+
+    - name: "Start a VM"
+      k8s:
+        state: present
+        kind: "{{ vm.result.kind }}"
+        namespace: "{{ vm.result.metadata.namespace }}"
+        api_version: "{{ vm.result.apiVersion }}"
+        name: "{{ vm.result.metadata.name }}"
+        definition:
+          spec:
+            running: true
+
+    - name: "Wait for the VM to start"
+      k8s_facts:
+        kind: "{{ vm.result.kind }}"
+        namespace: "{{ vm.result.metadata.namespace }}"
+        api_version: "{{ vm.result.apiVersion }}"
+        name: "{{ vm.result.metadata.name }}"
+      register: vm_status
+      retries: 600
+      delay: 10
+      until: vm_status.resources[0].status.ready|default(false)
+
+    - name: "Stop a VM"
+      k8s:
+        state: present
+        kind: "{{ vm.result.kind }}"
+        namespace: "{{ vm.result.metadata.namespace }}"
+        api_version: "{{ vm.result.apiVersion }}"
+        name: "{{ vm.result.metadata.name }}"
+        definition:
+          spec:
+            running: false
+
+    - name: "Wait for the VM to stop"
+      k8s_facts:
+        kind: "{{ vm.result.kind }}"
+        namespace: "{{ vm.result.metadata.namespace }}"
+        api_version: "{{ vm.result.apiVersion }}"
+        name: "{{ vm.result.metadata.name }}"
+      register: vm_status
+      retries: 600
+      delay: 10
+      until: vm_status.resources[0].status.ready|default(false) == false
+
+    - name: "Remove a VM"
+      k8s:
+        state: absent
+        definition: "{{ vm.result }}"
+
