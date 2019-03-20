@@ -36,3 +36,14 @@
         that:
           - "oses['os.template.cnv.io/centos7.0'] > 0"
 
+    - name: "Instantiate template"
+      include_role:
+        name: oc_post_template
+      vars:
+        namespace: myproject
+        template: "{{ item }}"
+        parameters:
+          PVCNAME: test-dummy-pvc
+        cleanup: true
+      with_items: "{{ templates.resources }}"
+

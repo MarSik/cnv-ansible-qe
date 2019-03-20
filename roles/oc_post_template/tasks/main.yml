@@ -1,0 +1,69 @@
+- block:
+  - debug:
+      msg: "Instantiating template {{ template.metadata.name }}"
+
+  - set_fact:
+      ti_name: "{{ lookup('password', '/dev/null length=15 chars=ascii_lowercase') }}"
+
+  - name: Prepare template configuration
+    k8s:
+      state: present
+      namespace: "{{ namespace }}"
+      definition:
+        kind: Secret
+        apiVersion: v1
+        metadata:
+          name: "template-secret-{{ ti_name }}"
+        stringData: "{{ parameters }}"
+
+  - name: Post template
+    k8s:
+      state: present
+      namespace: "{{ namespace }}"
+      definition:
+        kind: TemplateInstance
+        apiVersion: template.openshift.io/v1
+        metadata:
+          name: "{{ ti_name }}"
+        spec:
+          secret:
+            name: "template-secret-{{ ti_name }}"
+          template: "{{ template }}"
+
+  - name: Wait for template instantiation
+    k8s_facts:
+      namespace: "{{ namespace }}"
+      name: "{{ ti_name }}"
+      kind: TemplateInstance
+      api_version: template.openshift.io/v1
+    register: ti
+    retries: 10
+    delay: 10
+    until: ti.resources[0].status|k8s_condition('Ready') or ti.resources[0].status|k8s_condition('InstantiateFailure')
+    when: not async
+
+  - debug:
+      msg: "{{ ti.resources[0].status|k8s_condition_message('InstantiateFailure') }}"
+    when: ti.resources[0].status|k8s_condition('InstantiateFailure')
+
+  - assert:
+      that: "ti.resources[0].status|k8s_condition('Ready') and not ti.resources[0].status|k8s_condition('InstantiateFailure')"
+
+  always:
+  - name: Cleanup template configuration
+    k8s:
+      state: absent
+      kind: Secret
+      api_version: v1
+      namespace: "{{ namespace }}"
+      name: "template-secret-{{ ti_name }}"
+
+  - name: Cleanup template instantiation request
+    k8s:
+      state: absent
+      namespace: "{{ namespace }}"
+      name: "{{ ti_name }}"
+      kind: TemplateInstance
+      api_version: template.openshift.io/v1
+    when: cleanup
+
