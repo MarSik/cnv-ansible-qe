@@ -15,6 +15,7 @@ spec:
     spec:
       domain:
         devices:
+          rng: {}
           disks:
           - disk:
               bus: virtio
@@ -22,6 +23,9 @@ spec:
           - disk:
               bus: virtio
             name: cloudinitdisk
+          interfaces:
+          - bridge: {}
+            name: default
         machine:
           type: ""
         resources:
@@ -30,14 +34,14 @@ spec:
           requests:
             memory: {{ vm_memory_size }}
       terminationGracePeriodSeconds: 0
+      networks:
+        - name: default
+          pod: {}
       volumes:
       - name: containerdisk
         containerDisk:
-          image: kubevirt/cirros-container-disk-demo:latest
+          image: kubevirt/fedora-cloud-disk-demo:latest
       - cloudInitNoCloud:
-          userData: |
-            #!/bin/sh
-
-            echo 'printed from cloud-init userdata'
+          userDataBase64: "{{ lookup('file', 'fixtures/cloudinit.txt') |b64encode }}"
         name: cloudinitdisk
 status: {}

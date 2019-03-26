@@ -10,7 +10,9 @@
     - fixtures/defaults.yml
   vars:
     vm_cpus: 1
+    vm_memory_size: 512Mi
   tasks:
+  - block:
     - name: "Define a VM"
       k8s:
         state: present
@@ -38,9 +40,27 @@
         api_version: "{{ vm.result.apiVersion }}"
         name: "{{ vm.result.metadata.name }}"
       register: vm_status
-      retries: 600
+      retries: 60
       delay: 10
       until: vm_status.resources[0].status.ready|default(false)
+
+    - name: "Wait for the VMI to get IP"
+      k8s_facts:
+        kind: "VirtualMachineInstance"
+        namespace: "{{ vm.result.metadata.namespace }}"
+        api_version: "{{ vm.result.apiVersion }}"
+        name: "{{ vm.result.metadata.name }}"
+      register: vmi_status
+      retries: 60
+      delay: 10
+      until: vmi_status.resources[0].status.interfaces[0].ipAddress|default("") != ""
+
+    - set_fact:
+        "vm_{{ vm.result.metadata.name|varname }}_ip": "{{ vmi_status.resources[0].status.interfaces[0].ipAddress }}"
+
+    - meta: refresh_inventory
+
+    - pause:
 
     - name: "Stop a VM"
       k8s:
@@ -60,10 +80,11 @@
         api_version: "{{ vm.result.apiVersion }}"
         name: "{{ vm.result.metadata.name }}"
       register: vm_status
-      retries: 600
+      retries: 60
       delay: 10
       until: vm_status.resources[0].status.ready|default(false) == false
 
+    always:
     - name: "Remove a VM"
       k8s:
         state: absent

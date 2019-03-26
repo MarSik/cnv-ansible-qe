@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # vim: sw=4 sts=4 et ft=python
-"""Prepare ansible inventory record for API endpoint
+"""Prepare ansible inventory record for minishift nodes
 
 Usage:
   bootstrap --list
@@ -31,17 +31,21 @@ def get_nodes():
     v1_node_list = v1_nodes.get()
     node_details = [node for node in v1_node_list.items]
 
+    first_ip = lambda node: next(addr.address
+                 for addr in node.status.addresses
+                 if addr.address != "localhost" and addr.address != "127.0.0.1")
+
     nodes = [{
         "name": node.metadata.name if node.metadata.name != "localhost" else "node",
         "groups": ["cnv", "masters", "etcd", "nodes"],
         "vars": {
-            "ansible_ssh_host": next(addr.address
-                for addr in node.status.addresses
-                if addr.address != "localhost" and addr.address != "127.0.0.1"),
+            "ansible_ssh_host": first_ip(node),
             "ansible_become": True,
             "ansible_become_method": "sudo",
             "ansible_user": "docker",
-            "ansible_ssh_private_key_file": "~/.minishift/machines/minishift/id_rsa"
+            "ansible_ssh_private_key_file": "~/.minishift/machines/minishift/id_rsa",
+            "ssh_via_arguments": "-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o 'ProxyCommand ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -W %h:%p -i ~/.minishift/machines/minishift/id_rsa docker@" + first_ip(node) + "'"
+
         }
     } for node in node_details]
 

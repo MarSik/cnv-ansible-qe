@@ -1,0 +1,13 @@
+#cloud-config
+ssh_pwauth: True
+disable_root: False
+chpasswd:
+  list: |
+    root:password
+  expire: False
+packages:
+  - python
+runcmd:
+  - sed -i'.orig' -e's/without-password/yes/' /etc/ssh/sshd_config
+  - service sshd restart
+
