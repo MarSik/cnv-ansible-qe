@@ -22,6 +22,16 @@ import sys
 from kubernetes import client, config
 from openshift.dynamic import DynamicClient
 
+from six import iteritems
+
+def compute_groups(labels):
+    groups = []
+    for k,v in iteritems(labels):
+        if k.startswith("node-role.kubernetes.io/") and v:
+            groups.append(k.split("/")[1])
+
+    return groups or ["master", "infra", "worker"]
+
 def get_nodes():
     k8s_client = config.new_client_from_config()
     dyn_client = DynamicClient(k8s_client)
@@ -37,7 +47,7 @@ def get_nodes():
 
     nodes = [{
         "name": node.metadata.name if node.metadata.name != "localhost" else "node",
-        "groups": ["cnv", "masters", "etcd", "nodes"],
+        "groups": ["cnv"] + compute_groups(node.metadata.labels),
         "vars": {
             "ansible_ssh_host": first_ip(node),
             "ansible_become": True,
