@@ -8,15 +8,13 @@ from kubernetes import client, config
 from openshift.dynamic import DynamicClient
 
 from six import iteritems
+import json
 
 from ansible.plugins.inventory import BaseInventoryPlugin
 
 
 def ansible_annotation_vars(annotations):
-    if "ansible" in annotations:
-        return json.loads(annotations["ansible"])
-    else:
-        return {}
+    return json.loads(annotations.get("ansible", "{}"))
 
 def dict_merge(*dicts):
     out = {}

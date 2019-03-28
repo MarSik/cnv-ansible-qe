@@ -13,7 +13,7 @@ spec:
       labels:
         kubevirt.io/vm: vm-cirros
       annotations:
-        ansible: "{'ansible_user': 'cirros', 'ansible_ssh_pass': 'gocubsgo', 'ansible_become': True, 'ansible_become_method': 'sudo'}"
+        ansible: '{"ansible_user": "cirros", "ansible_ssh_pass": "gocubsgo", "ansible_become": true, "ansible_become_method": "sudo"}'
     spec:
       domain:
         devices:

@@ -10,9 +10,7 @@
     - fixtures/defaults.yml
   vars:
     vm_cpus: 1
-    vm_memory_size: 512Mi
   tasks:
-  - block:
     - name: "Define a VM"
       k8s:
         state: present
@@ -58,10 +56,30 @@
     - set_fact:
         "vm_{{ vm.result.metadata.name|varname }}_ip": "{{ vmi_status.resources[0].status.interfaces[0].ipAddress }}"
 
+    - pause:
     - meta: refresh_inventory
 
-    - pause:
+- name: "Wait for sshs"
+  hosts: vms
+  gather_facts: no
+  tasks:
+    # wait_for_connection is better, but cirros has no python
+    - name: "Wait for the connection"
+      wait_for:
+        port: "{{ hostvars[inventory_hostname]['ansible_ssh_port'] |default(22) }}"
+        host: "{{ hostvars[inventory_hostname]['ansible_ssh_host'] }}"
+      delegate_to: "{{ groups['master'][0] }}"
 
+- name: "Run test inside VM"
+  hosts: vms
+  gather_facts: no
+  tasks:
+    - name: "Whoami"
+      raw: whoami
+
+- name: "Cleanup"
+  hosts: localhost
+  tasks:
     - name: "Stop a VM"
       k8s:
         state: present
@@ -84,7 +102,6 @@
       delay: 10
       until: vm_status.resources[0].status.ready|default(false) == false
 
-    always:
     - name: "Remove a VM"
       k8s:
         state: absent
